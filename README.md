@@ -52,9 +52,6 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 2. Install dependencies:
 ```bash
 pip install -r requirements.txt
-
-curl -L "https://github.com/davisking/dlib-models/raw/master/shape_predictor_68_face_landmarks.dat.bz2" -o models/shape_predictor_68_face_landmarks.dat.bz2
-// Extract the file into the workdir
 ```
 
 ## Usage

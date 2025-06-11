@@ -10,14 +10,9 @@ class EyeMovementDetector:
         self.consecutive_frames_threshold = 3
         self.blink_history = []
         self.movement_history = []
-        self.prev_eye_positions = None
-        self.frame_count = 0
-        self.test_mode = False  # Flag for test mode
         
     def analyze_eye_movement(self, frame: np.ndarray, face: np.ndarray, landmarks: np.ndarray) -> Dict:
         """Analyze eye movements and blinks in the frame."""
-        self.frame_count += 1
-        
         left_eye, right_eye = self.face_detector.get_eye_regions(frame, landmarks)
         
         if left_eye is None or right_eye is None:
@@ -51,43 +46,12 @@ class EyeMovementDetector:
         if len(self.movement_history) > 30:
             self.movement_history.pop(0)
         
-        # In test mode, simulate unnatural patterns
-        if self.test_mode:
-            return self._simulate_test_patterns()
-        
         return {
             'is_blinking': is_blinking,
             'eye_aspect_ratio': ear,
             'movement_score': movement_score,
             'is_natural': self._is_natural_eye_behavior()
         }
-    
-    def _simulate_test_patterns(self) -> Dict:
-        """Simulate different test patterns for eye movement."""
-        # Pattern 1: No blinks at all
-        if self.frame_count < 100:
-            return {
-                'is_blinking': False,
-                'eye_aspect_ratio': 0.3,
-                'movement_score': 0.1,
-                'is_natural': False
-            }
-        # Pattern 2: Too frequent blinks
-        elif self.frame_count < 200:
-            return {
-                'is_blinking': self.frame_count % 10 < 5,  # Blink every 10 frames
-                'eye_aspect_ratio': 0.1 if self.frame_count % 10 < 5 else 0.3,
-                'movement_score': 0.1,
-                'is_natural': False
-            }
-        # Pattern 3: Unnatural movement
-        else:
-            return {
-                'is_blinking': False,
-                'eye_aspect_ratio': 0.3,
-                'movement_score': 0.8,  # High movement score
-                'is_natural': False
-            }
     
     def _calculate_eye_aspect_ratio(self, eye_region: np.ndarray) -> float:
         """Calculate the eye aspect ratio (EAR) for an eye region."""
@@ -158,38 +122,4 @@ class EyeMovementDetector:
         if np.std(movement_scores) < 0.01:
             return False  # Too consistent movement is suspicious
         
-        # Check for unnatural patterns
-        if self._has_unnatural_pattern():
-            return False
-        
-        return True
-    
-    def _has_unnatural_pattern(self) -> bool:
-        """Check for specific unnatural eye movement patterns."""
-        if len(self.movement_history) < 20:
-            return False
-            
-        # Check for too regular movement
-        movement_std = np.std(self.movement_history)
-        if movement_std < 0.01:
-            return True
-            
-        # Check for sudden changes in movement
-        movement_diff = np.diff(self.movement_history)
-        if np.max(np.abs(movement_diff)) > 0.5:
-            return True
-            
-        # Check for lack of variation
-        if np.max(self.movement_history) - np.min(self.movement_history) < 0.1:
-            return True
-            
-        return False
-    
-    def enable_test_mode(self):
-        """Enable test mode for simulating unnatural patterns."""
-        self.test_mode = True
-        self.frame_count = 0
-    
-    def disable_test_mode(self):
-        """Disable test mode."""
-        self.test_mode = False 
+        return True 
