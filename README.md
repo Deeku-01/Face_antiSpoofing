@@ -1,52 +1,32 @@
 # Anti-Face Spoofing Detection System
 
-A comprehensive system for detecting face spoofing attempts in images and videos, including deepfake detection.
+A robust anti-spoofing system that uses multiple detection techniques to identify fake faces in real-time video streams.
 
 ## Features
 
-- Real-time face liveness detection
-- Multiple spoofing detection methods:
-  - Eye movement analysis
-  - Facial expression symmetry
-  - Head movement consistency
-  - Texture analysis
-  - Color consistency
-  - Edge detection
-  - Frequency domain analysis
-  - Reflection analysis
-  - Micro-expression detection
+- **Multi-Modal Detection**: Combines multiple detection methods for higher accuracy
+- **Real-time Processing**: Optimized for live video streams
+- **Multiple Analysis Techniques**:
+  - Eye Movement Analysis
+  - Texture Analysis
+  - Depth Analysis
+  - Color Analysis
+  - Liveness Detection
 
-## Project Structure
+## Requirements
 
-```
-anti_face_spoofing/
-├── src/
-│   ├── detectors/
-│   │   ├── eye_movement.py
-│   │   ├── texture_analysis.py
-│   │   ├── color_analysis.py
-│   │   ├── frequency_analysis.py
-│   │   └── micro_expressions.py
-│   ├── utils/
-│   │   ├── face_detection.py
-│   │   ├── preprocessing.py
-│   │   └── visualization.py
-│   └── main.py
-├── models/
-│   └── saved_models/
-├── data/
-│   ├── raw/
-│   └── processed/
-├── tests/
-└── requirements.txt
-```
+- Python 3.8+
+- OpenCV
+- NumPy
+- Webcam
+- dlib shape predictor file
 
 ## Installation
 
-1. Create a virtual environment:
+1. Clone the repository:
 ```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+git clone https://github.com/Deeku-01/anti-face-spoofing.git
+cd anti-face-spoofing
 ```
 
 2. Install dependencies:
@@ -54,47 +34,102 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
+3. Download the shape predictor file:
+   - Download the 68-point facial landmark predictor file from [dlib's official website](http://dlib.net/files/shape_predictor_68_face_landmarks.dat.bz2)
+   - Extract the downloaded file
+   - Place the `shape_predictor_68_face_landmarks.dat` file in the project root directory
+
+   Or use the following commands:
+   ```bash
+   # For Windows
+   curl -L http://dlib.net/files/shape_predictor_68_face_landmarks.dat.bz2 -o shape_predictor_68_face_landmarks.dat.bz2
+   bzip2 -d shape_predictor_68_face_landmarks.dat.bz2
+
+   # For Linux/Mac
+   wget http://dlib.net/files/shape_predictor_68_face_landmarks.dat.bz2
+   bzip2 -d shape_predictor_68_face_landmarks.dat.bz2
+   ```
+
 ## Usage
 
-1. Run the main detection system:
+Run the test script to start the anti-spoofing detection:
 ```bash
-python src/main.py
+python test_detection.py
 ```
 
-2. For video processing:
-```bash
-python src/main.py --video path/to/video.mp4
+### Controls
+- Press 'q' to quit the application
+
+### Display Information
+The system shows:
+- Real-time status (REAL/SPOOFED)
+- Individual scores for each detection method
+- FPS counter
+- Face landmarks
+- Face bounding box
+
+## Project Structure
+
+```
+anti-face-spoofing/
+├── src/
+│   ├── detectors/
+│   │   ├── eye_movement.py
+│   │   ├── texture_analysis.py
+│   │   ├── depth_analysis.py
+│   │   ├── color_analysis.py
+│   │   └── liveness_detection.py
+│   └── utils/
+│       ├── face_detection.py
+│       └── visualization.py
+├── test_detection.py
+├── requirements.txt
+├── shape_predictor_68_face_landmarks.dat
+└── README.md
 ```
 
 ## Detection Methods
 
-The system uses multiple detection methods to ensure robust spoofing detection:
+### 1. Eye Movement Analysis
+- Detects natural eye movements and blinks
+- Analyzes eye aspect ratio
+- Tracks eye movement smoothness
 
-1. **Eye Movement Analysis**
-   - Detects natural eye blinking patterns
-   - Analyzes eye movement smoothness
-   - Checks for proper eye reflections
+### 2. Texture Analysis
+- Analyzes facial texture patterns
+- Detects unnatural edges
+- Examines frequency domain characteristics
 
-2. **Texture Analysis**
-   - Analyzes skin texture patterns
-   - Detects unnatural edges
-   - Identifies printing artifacts
+### 3. Depth Analysis
+- Analyzes facial depth characteristics
+- Detects gradient depth patterns
+- Examines shadow patterns
+- Analyzes contour variations
 
-3. **Color Analysis**
-   - Checks for consistent skin tones
-   - Analyzes specular highlights
-   - Detects color artifacts
+### 4. Color Analysis
+- Analyzes skin tone patterns
+- Detects color variance
+- Examines reflections and highlights
+- Tracks temporal consistency
 
-4. **Frequency Analysis**
-   - Performs FFT analysis
-   - Detects unnatural frequency patterns
-   - Identifies compression artifacts
+### 5. Liveness Detection
+- Analyzes facial movements
+- Detects natural expressions
+- Examines temporal patterns
+- Tracks face dynamics
 
-5. **Micro-expression Detection**
-   - Analyzes subtle facial movements
-   - Detects natural skin deformation
-   - Identifies static face regions
+## Performance Optimization
+
+- Reduced resolution (640x480)
+- Frame skipping for better performance
+- Optimized processing pipeline
+- Smooth score updates
+- Efficient memory usage
 
 ## Contributing
 
-Feel free to submit issues and enhancement requests! 
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details. 
