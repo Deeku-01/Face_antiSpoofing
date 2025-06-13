@@ -5,6 +5,7 @@ from typing import Dict, Tuple
 from utils.face_detection import FaceDetector
 from detectors.eye_movement import EyeMovementDetector
 from detectors.texture_analysis import TextureAnalyzer
+from detectors.deep_learning import DeepLearningDetector
 from utils.visualization import Visualizer
 
 class AntiSpoofingSystem:
@@ -12,6 +13,7 @@ class AntiSpoofingSystem:
         self.face_detector = FaceDetector()
         self.eye_detector = EyeMovementDetector()
         self.texture_analyzer = TextureAnalyzer()
+        self.deep_learning_detector = DeepLearningDetector()
         self.visualizer = Visualizer()
         self.spoof_threshold = 0.7
         
@@ -39,9 +41,10 @@ class AntiSpoofingSystem:
         # Get detection results from each module
         eye_results = self.eye_detector.analyze_eye_movement(frame, face, landmarks)
         texture_results = self.texture_analyzer.analyze_texture(frame, face, landmarks)
+        deep_learning_results = self.deep_learning_detector.analyze_frame(frame, face)
         
-        # Combine results
-        is_spoofed = self._combine_results(eye_results, texture_results)
+        # Combine results with deep learning having higher weight
+        is_spoofed = self._combine_results(eye_results, texture_results, deep_learning_results)
         
         # Prepare detailed results
         results = {
@@ -50,22 +53,29 @@ class AntiSpoofingSystem:
             'eye_regions': (left_eye, right_eye),
             'eye_analysis': eye_results,
             'texture_analysis': texture_results,
+            'deep_learning_analysis': deep_learning_results,
             'is_spoofed': is_spoofed
         }
         
         return is_spoofed, results
     
-    def _combine_results(self, eye_results: Dict, texture_results: Dict) -> bool:
+    def _combine_results(self, eye_results: Dict, texture_results: Dict, deep_learning_results: Dict) -> bool:
         """Combine results from different detectors to make final decision."""
         # Weight the different factors
-        eye_weight = 0.4
-        texture_weight = 0.6
+        eye_weight = 0.2
+        texture_weight = 0.3
+        deep_learning_weight = 0.5  # Higher weight for deep learning results
         
         # Calculate combined score
         eye_score = 0.0 if eye_results['is_natural'] else 1.0
         texture_score = texture_results['combined_score']
+        deep_learning_score = 1.0 - deep_learning_results['confidence']  # Convert real confidence to spoof score
         
-        combined_score = (eye_weight * eye_score + texture_weight * texture_score)
+        combined_score = (
+            eye_weight * eye_score + 
+            texture_weight * texture_score + 
+            deep_learning_weight * deep_learning_score
+        )
         
         return combined_score > self.spoof_threshold
 

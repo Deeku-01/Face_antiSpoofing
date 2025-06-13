@@ -2,56 +2,129 @@ import cv2
 import numpy as np
 from typing import Tuple, List, Dict
 from src.utils.face_detection import FaceDetector
+from collections import deque
 
 class EyeMovementDetector:
-    def __init__(self):
+    def __init__(self, history_size=10, movement_threshold=0.1):
         self.face_detector = FaceDetector()
         self.eye_aspect_ratio_threshold = 0.2
         self.consecutive_frames_threshold = 3
         self.blink_history = []
         self.movement_history = []
+        self.history_size = history_size
+        self.movement_threshold = movement_threshold
+        self.eye_movement_history = deque(maxlen=history_size)
+        self.prev_eye_regions = None
+        self.optical_flow = cv2.optflow.DualTVL1OpticalFlow_create()
         
+    def _preprocess_eye_region(self, eye_region):
+        """Preprocess eye region for optical flow."""
+        if eye_region is None or eye_region.size == 0:
+            return None
+            
+        # Convert to grayscale
+        if len(eye_region.shape) == 3:
+            eye_region = cv2.cvtColor(eye_region, cv2.COLOR_BGR2GRAY)
+            
+        # Ensure minimum size
+        min_size = (32, 32)
+        if eye_region.shape[0] < min_size[0] or eye_region.shape[1] < min_size[1]:
+            eye_region = cv2.resize(eye_region, min_size)
+            
+        # Normalize
+        eye_region = cv2.normalize(eye_region, None, 0, 255, cv2.NORM_MINMAX)
+        
+        return eye_region
+        
+    def _calculate_movement(self, prev_region, curr_region):
+        """Calculate movement between two eye regions."""
+        if prev_region is None or curr_region is None:
+            return 0.0
+            
+        try:
+            # Ensure both regions have the same size
+            if prev_region.shape != curr_region.shape:
+                curr_region = cv2.resize(curr_region, (prev_region.shape[1], prev_region.shape[0]))
+            
+            # Calculate optical flow
+            flow = self.optical_flow.calc(prev_region, curr_region, None)
+            
+            if flow is None:
+                return 0.0
+                
+            # Calculate magnitude of movement
+            magnitude = np.sqrt(flow[..., 0]**2 + flow[..., 1]**2)
+            return np.mean(magnitude)
+            
+        except Exception as e:
+            print(f"Error calculating movement: {str(e)}")
+            return 0.0
+            
     def analyze_eye_movement(self, frame: np.ndarray, face: np.ndarray, landmarks: np.ndarray) -> Dict:
         """Analyze eye movements and blinks in the frame."""
-        left_eye, right_eye = self.face_detector.get_eye_regions(frame, landmarks)
-        
-        if left_eye is None or right_eye is None:
+        try:
+            x, y, w, h = face
+            
+            # Extract eye regions using landmarks
+            left_eye = landmarks[36:42]
+            right_eye = landmarks[42:48]
+            
+            # Get bounding boxes for eyes
+            left_eye_box = cv2.boundingRect(left_eye.astype(np.float32))
+            right_eye_box = cv2.boundingRect(right_eye.astype(np.float32))
+            
+            # Extract eye regions
+            left_eye_region = frame[y + left_eye_box[1]:y + left_eye_box[1] + left_eye_box[3],
+                                  x + left_eye_box[0]:x + left_eye_box[0] + left_eye_box[2]]
+            right_eye_region = frame[y + right_eye_box[1]:y + right_eye_box[1] + right_eye_box[3],
+                                   x + right_eye_box[0]:x + right_eye_box[0] + right_eye_box[2]]
+            
+            # Preprocess eye regions
+            left_eye_region = self._preprocess_eye_region(left_eye_region)
+            right_eye_region = self._preprocess_eye_region(right_eye_region)
+            
+            if self.prev_eye_regions is None:
+                self.prev_eye_regions = (left_eye_region, right_eye_region)
+                return {
+                    'is_natural': True,
+                    'movement_score': 0.0,
+                    'error': None
+                }
+            
+            # Calculate movement for both eyes
+            left_movement = self._calculate_movement(self.prev_eye_regions[0], left_eye_region)
+            right_movement = self._calculate_movement(self.prev_eye_regions[1], right_eye_region)
+            
+            # Average movement
+            movement = (left_movement + right_movement) / 2.0
+            
+            # Update history
+            self.eye_movement_history.append(movement)
+            
+            # Update previous regions
+            self.prev_eye_regions = (left_eye_region, right_eye_region)
+            
+            # Calculate movement score
+            if len(self.eye_movement_history) > 1:
+                movement_score = np.mean(list(self.eye_movement_history))
+                is_natural = movement_score > self.movement_threshold
+            else:
+                movement_score = 0.0
+                is_natural = True
+            
             return {
-                'is_blinking': False,
-                'eye_aspect_ratio': 0.0,
-                'movement_score': 0.0,
-                'is_natural': False
+                'is_natural': is_natural,
+                'movement_score': movement_score,
+                'error': None
             }
-        
-        # Calculate eye aspect ratios
-        left_ear = self._calculate_eye_aspect_ratio(left_eye)
-        right_ear = self._calculate_eye_aspect_ratio(right_eye)
-        
-        # Average EAR
-        ear = (left_ear + right_ear) / 2.0
-        
-        # Detect blink
-        is_blinking = ear < self.eye_aspect_ratio_threshold
-        
-        # Analyze eye movement
-        movement_score = self._analyze_eye_movement_smoothness(left_eye, right_eye)
-        
-        # Update history
-        self.blink_history.append(is_blinking)
-        self.movement_history.append(movement_score)
-        
-        # Keep history limited
-        if len(self.blink_history) > 30:
-            self.blink_history.pop(0)
-        if len(self.movement_history) > 30:
-            self.movement_history.pop(0)
-        
-        return {
-            'is_blinking': is_blinking,
-            'eye_aspect_ratio': ear,
-            'movement_score': movement_score,
-            'is_natural': self._is_natural_eye_behavior()
-        }
+            
+        except Exception as e:
+            print(f"Error in eye movement analysis: {str(e)}")
+            return {
+                'is_natural': False,
+                'movement_score': 0.0,
+                'error': str(e)
+            }
     
     def _calculate_eye_aspect_ratio(self, eye_region: np.ndarray) -> float:
         """Calculate the eye aspect ratio (EAR) for an eye region."""

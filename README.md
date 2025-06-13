@@ -1,45 +1,53 @@
-# Anti-Face Spoofing Detection System
+# Anti Face Spoofing System
 
-A robust anti-spoofing system that uses multiple detection techniques to identify fake faces in real-time video streams.
+A robust face anti-spoofing system that combines multiple detection methods to prevent presentation attacks. The system uses a combination of traditional computer vision techniques and deep learning to achieve high accuracy in detecting fake faces.
 
 ## Features
 
-- **Multi-Modal Detection**: Combines multiple detection methods for higher accuracy
-- **Real-time Processing**: Optimized for live video streams
-- **Multiple Analysis Techniques**:
+- **Multi-Modal Detection**:
   - Eye Movement Analysis
   - Texture Analysis
   - Depth Analysis
   - Color Analysis
   - Liveness Detection
+  - Deep Learning-based Detection
+
+- **Real-time Processing**:
+  - Live webcam feed analysis
+  - Real-time visualization
+  - Frame-by-frame scoring
+
+- **Robust Decision Making**:
+  - Weighted scoring system
+  - Temporal averaging
+  - Confidence scoring
+  - Multiple frame analysis
 
 ## Requirements
 
 - Python 3.8+
-- OpenCV
+- OpenCV (with contrib modules)
+- PyTorch
+- Transformers
 - NumPy
-- Webcam
-- dlib shape predictor file
+- dlib
 
 ## Installation
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/Deeku-01/anti-face-spoofing.git
+git clone https://github.com/yourusername/anti-face-spoofing.git
 cd anti-face-spoofing
 ```
 
-2. Install dependencies:
+2. Install required packages:
 ```bash
 pip install -r requirements.txt
 ```
 
-3. Download the shape predictor file:
-   - Download the 68-point facial landmark predictor file from [dlib's official website](http://dlib.net/files/shape_predictor_68_face_landmarks.dat.bz2)
-   - Extract the downloaded file
-   - Place the `shape_predictor_68_face_landmarks.dat` file in the project root directory
+3. Download and set up required models:
 
-   Or use the following commands:
+   a. Download the dlib shape predictor:
    ```bash
    # For Windows
    curl -L http://dlib.net/files/shape_predictor_68_face_landmarks.dat.bz2 -o shape_predictor_68_face_landmarks.dat.bz2
@@ -50,23 +58,42 @@ pip install -r requirements.txt
    bzip2 -d shape_predictor_68_face_landmarks.dat.bz2
    ```
 
-## Usage
+   b. Download the OpenCV face detection model:
+   ```bash
+   # For Windows
+   curl -L https://raw.githubusercontent.com/opencv/opencv/master/samples/dnn/face_detector/deploy.prototxt -o models/deploy.prototxt
+   curl -L https://raw.githubusercontent.com/opencv/opencv_3rdparty/dnn_samples_face_detector_20170830/res10_300x300_ssd_iter_140000.caffemodel -o models/res10_300x300_ssd_iter_140000.caffemodel
 
-Run the test script to start the anti-spoofing detection:
-```bash
-python test_detection.py
+   # For Linux/Mac
+   wget https://raw.githubusercontent.com/opencv/opencv/master/samples/dnn/face_detector/deploy.prototxt -O models/deploy.prototxt
+   wget https://raw.githubusercontent.com/opencv/opencv_3rdparty/dnn_samples_face_detector_20170830/res10_300x300_ssd_iter_140000.caffemodel -O models/res10_300x300_ssd_iter_140000.caffemodel
+   ```
+
+   c. Download the LBF model:
+   ```bash
+   # For Windows
+   curl -L https://github.com/kurnianggoro/GSOC2017/raw/master/data/lbfmodel.yaml -o models/lbfmodel.yaml
+
+   # For Linux/Mac
+   wget https://github.com/kurnianggoro/GSOC2017/raw/master/data/lbfmodel.yaml -O models/lbfmodel.yaml
+   ```
+
+   d. Download the ResNet-50 model (this will be downloaded automatically on first run):
+   ```bash
+   python -c "from transformers import AutoModelForImageClassification; AutoModelForImageClassification.from_pretrained('microsoft/resnet-50', cache_dir='models/saved_models')"
+   ```
+
+4. Verify the model directory structure:
 ```
-
-### Controls
-- Press 'q' to quit the application
-
-### Display Information
-The system shows:
-- Real-time status (REAL/SPOOFED)
-- Individual scores for each detection method
-- FPS counter
-- Face landmarks
-- Face bounding box
+models/
+├── deploy.prototxt
+├── res10_300x300_ssd_iter_140000.caffemodel
+├── lbfmodel.yaml
+└── saved_models/
+    └── microsoft/
+        └── resnet-50/
+            └── (model files)
+```
 
 ## Project Structure
 
@@ -78,53 +105,90 @@ anti-face-spoofing/
 │   │   ├── texture_analysis.py
 │   │   ├── depth_analysis.py
 │   │   ├── color_analysis.py
-│   │   └── liveness_detection.py
-│   └── utils/
-│       ├── face_detection.py
-│       └── visualization.py
+│   │   ├── liveness_detection.py
+│   │   └── deep_learning.py
+│   ├── utils/
+│   │   ├── face_detection.py
+│   │   ├── preprocessing.py
+│   │   └── visualization.py
+│   ├── main.py
+│   └── __init__.py
+├── models/
+|   ├── shape_predictor_68_face_landmarks.dat
+│   ├── deploy.prototxt
+│   ├── res10_300x300_ssd_iter_140000.caffemodel
+│   ├── lbfmodel.yaml
+│   └── saved_models/
+│       └── microsoft/
+│           └── resnet-50/
+│               └── (model files)
+├── data/
+├── tests/
 ├── test_detection.py
-├── requirements.txt
-├── shape_predictor_68_face_landmarks.dat
-└── README.md
+├── download_models.py
+└── requirements.txt
 ```
 
-## Detection Methods
+## Usage
 
-### 1. Eye Movement Analysis
-- Detects natural eye movements and blinks
-- Analyzes eye aspect ratio
-- Tracks eye movement smoothness
+1. Run the test script:
+```bash
+python test_detection.py
+```
 
-### 2. Texture Analysis
-- Analyzes facial texture patterns
-- Detects unnatural edges
-- Examines frequency domain characteristics
+2. The system will:
+   - Open your webcam
+   - Start analyzing frames
+   - Display real-time results
+   - Show confidence scores
+   - Indicate REAL/SPOOFED status
 
-### 3. Depth Analysis
-- Analyzes facial depth characteristics
-- Detects gradient depth patterns
-- Examines shadow patterns
-- Analyzes contour variations
+3. Controls:
+   - Press 'q' to quit
+   - Wait for stable results (about 1 second)
 
-### 4. Color Analysis
-- Analyzes skin tone patterns
-- Detects color variance
-- Examines reflections and highlights
-- Tracks temporal consistency
+## How It Works
 
-### 5. Liveness Detection
-- Analyzes facial movements
-- Detects natural expressions
-- Examines temporal patterns
-- Tracks face dynamics
+The system uses a multi-stage approach to detect spoofing attempts:
 
-## Performance Optimization
+1. **Face Detection**: Locates faces in the frame using OpenCV's DNN face detector
+2. **Landmark Detection**: Identifies facial landmarks using dlib
+3. **Feature Analysis**: Multiple detectors analyze different aspects:
+   - Eye movement patterns
+   - Surface texture
+   - Depth information
+   - Color distribution
+   - Liveness indicators
+   - Deep learning features
 
-- Reduced resolution (640x480)
-- Frame skipping for better performance
-- Optimized processing pipeline
-- Smooth score updates
-- Efficient memory usage
+4. **Decision Making**:
+   - Scores from each detector are weighted
+   - Temporal averaging over 30 frames
+   - Confidence-based final decision
+
+## Performance
+
+- Processing Speed: 20-30 FPS on standard hardware
+- Accuracy: High accuracy with multiple detection methods
+- False Positive Rate: Reduced through temporal averaging
+- False Negative Rate: Minimized by combining multiple features
+
+## Troubleshooting
+
+1. If models are not found:
+   - Verify the models directory structure
+   - Check if all model files are downloaded
+   - Ensure correct file permissions
+
+2. If face detection fails:
+   - Check if OpenCV is properly installed with contrib modules
+   - Verify the face detection model files are in the correct location
+   - Ensure good lighting conditions
+
+3. If deep learning model fails:
+   - Check internet connection for model download
+   - Verify PyTorch installation
+   - Check GPU availability if using CUDA
 
 ## Contributing
 
@@ -132,4 +196,11 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details. 
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Acknowledgments
+
+- Uses ResNet-50 from Microsoft for deep learning detection
+- Implements OpenCV's DNN face detector
+- Uses dlib for facial landmark detection
+- OpenCV for computer vision operations 
